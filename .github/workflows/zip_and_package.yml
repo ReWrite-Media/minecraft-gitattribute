@@ -20,7 +20,7 @@ jobs:
     - name: Create zip file
       run: zip -r "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld" .
 
-    - name: GH Release
+    - name: Package and Release
       uses: softprops/action-gh-release@v0.1.15
       with:
         name: ${{ github.event.repository.name }} ${{ steps.get-commit-hash.outputs.commit_hash }}
