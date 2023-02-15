@@ -1,4 +1,4 @@
-name: Zip and Package Release
+name: Zip Package and Post Release on Slack
 
 on:
   push:
@@ -11,38 +11,25 @@ jobs:
     if: "contains(github.event.head_commit.message, '--package')"
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Get commit hash
       id: get-commit-hash
       run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Debug commit hash
-      run: echo "commit_hash is ${{ steps.get-commit-hash.outputs.commit_hash }}"
-
     - name: Create zip file
       run: zip -r "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld" .
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1.0.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: GH Release
+      uses: softprops/action-gh-release@v0.1.15
       with:
-        release_name: ${{ github.event.repository.name }} ${{ steps.get-commit-hash.outputs.commit_hash }}
+        name: ${{ github.event.repository.name }} ${{ steps.get-commit-hash.outputs.commit_hash }}
         tag_name: ${{ steps.get-commit-hash.outputs.commit_hash }}
         draft: false
         prerelease: false
-
-    - name: Upload file to release
-      uses: actions/upload-release-asset@v1.0.1
+        files: "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: "./${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld"
-        asset_name: "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld"
-        asset_content_type: application/zip
 
     - name: Slack Notification
       uses: homeday-de/slack-release-bot-action@main
