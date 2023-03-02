@@ -18,7 +18,7 @@ jobs:
       run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Create zip file
-      run: zip -r "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld" .
+      run: zip -r "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld" . -x ".git/*" ".github/*"
 
     - name: Package and Release
       uses: softprops/action-gh-release@v0.1.15
