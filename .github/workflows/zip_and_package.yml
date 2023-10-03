@@ -1,4 +1,4 @@
-name: Zip Package and Post Release on Slack
+name: Zip and Package Release
 
 on:
   push:
@@ -6,19 +6,50 @@ on:
       - main
 
 jobs:
-  create-zip:
+  create-release:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, '--package')"
+    permissions:
+      contents: write
+
+    env:
+      RP_FOLDER: "rwmcfrp"
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
-
+      uses: actions/checkout@v2
+    
     - name: Get commit hash
       id: get-commit-hash
       run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Create zip file
-      run: zip -r "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld" . -x ".git/*" ".github/*"
+    # - name: Check if hud_screen is there
+    #   run: |
+    #      if [ ! -f resource_packs/${{ env.RP_FOLDER }}/ui/hud_screen.json ]; then
+    #        echo "You are missing the hud_screen file for version support. Please add." >&2
+    #        exit 1
+    #      fi
+
+    - name: Remove git files
+      run: |
+        rm -rf .git
+        rm -rf .github
+
+    # - name: Install jq
+    #   run: sudo apt-get install jq -y
+
+    # - name: Edit hud screen file
+    #   run: |
+    #     jq --arg sha "${{ steps.get-commit-hash.outputs.commit_hash }}" '(. | .. | objects | select(has("$rwm_build")) | .["$rwm_build"]) |= $sha' resource_packs/${{ env.RP_FOLDER }}/ui/hud_screen.json > temp.json && mv temp.json resource_packs/${{ env.RP_FOLDER }}/ui/hud_screen.json
+
+    - name: Create main zip file
+      run: zip -r "${{ github.event.repository.name }}.mcworld" .
+    
+    # - name: Edit files for client build
+    #   run: |
+    #     jq '.root_panel += { "ignored": "$is_publish" }' resource_packs/${{ env.RP_FOLDER }}/ui/hud_screen.json > temp.json && mv temp.json resource_packs/${{ env.RP_FOLDER }}/ui/hud_screen.json
+
+    # - name: Create client zip file
+    #   run: zip -r "${{ github.event.repository.name }}-client.mcworld" . -x "${{ github.event.repository.name }}.mcworld" 
 
     - name: Package and Release
       uses: softprops/action-gh-release@v0.1.15
@@ -27,14 +58,7 @@ jobs:
         tag_name: ${{ steps.get-commit-hash.outputs.commit_hash }}
         draft: false
         prerelease: false
-        files: "${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld"
+        files: |
+          ${{ github.event.repository.name }}.mcworld
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Slack Notification
-      uses: homeday-de/slack-release-bot-action@main
-      with:
-        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        title: 📦 ${{ github.event.repository.name }} release ${{ steps.get-commit-hash.outputs.commit_hash }}
-        body: ${{ github.event.head_commit.message }}\n\n\n<https://github.com/${{ github.repository }}/releases/download/${{ steps.get-commit-hash.outputs.commit_hash }}/${{ github.repository_owner }}_${{ github.event.repository.name }}-${{ steps.get-commit-hash.outputs.commit_hash }}.mcworld|🔗 Download for this release>
-        context: Based on commit by ${{ github.event.head_commit.author.name }}
